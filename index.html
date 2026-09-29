@@ -80,7 +80,36 @@ body{
 .block[data-type="h1"]::after{top:16px}
 .block[data-type="h2"]::after{top:11px}
 .block[data-type="h3"]::after{top:7px}
-.block[data-type="pre"]::after{top:5px}
+/* コードブロックは、連続する行（.block[data-type="pre"]）をまとめて外側の .pre-group
+   要素でラップし、その外側の要素だけを overflow-x:auto にすることで、コードブロック
+   全体がひとつのスクロール単位としてスクロールするようにする（行ごとに個別スクロール
+   させない）。ラップ処理は normalizePreGroups() が編集のたびに行う。
+   番号はガター番号と同じ位置に揃うよう、ラッパー自体を左マージンでガター側まで広げ、
+   sticky 配置で横スクロールしても左端に固定表示させる。 */
+.pre-group{
+  display:block; overflow-x:auto; border-radius:6px;
+  background:var(--code-bg);
+  margin:.3em 0 .3em calc(-1 * (var(--gutter) - 8px));
+  scrollbar-width:thin;
+}
+.pre-group::-webkit-scrollbar{height:8px;}
+.pre-group::-webkit-scrollbar-track{background:transparent;}
+.pre-group::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
+.pre-group::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+.block[data-type="pre"]{background:transparent; padding:2px 14px 2px 0; font-family:var(--font-mono); font-size:.88em; white-space:pre; overflow:visible; margin:0; border-radius:0;}
+.block[data-type="pre"]::after{content:none;}
+.block[data-type="pre"]::before{
+  content:counter(lineno);
+  position:sticky; left:0; top:auto;
+  display:inline-block; width:calc(var(--gutter) - 20px); margin-right:10px;
+  text-align:right;
+  font-family:var(--font-mono); font-size:12px;
+  color:var(--muted); opacity:.5;
+  background:var(--code-bg);
+  user-select:none; pointer-events:none;
+  vertical-align:top; z-index:2;
+}
+.block[data-type="pre"].is-current::before{color:var(--accent); opacity:1; text-shadow:0 0 10px rgba(var(--glow),.7);}
 
 .block[data-type="h1"]{font-size:1.9em; font-weight:700; margin:.5em 0 .1em;}
 .block[data-type="h2"]{font-size:1.5em; font-weight:700; margin:.4em 0 .1em;}
@@ -89,10 +118,21 @@ body{
 .block[data-type="li"]::before{content:"•"; position:absolute; left:.3em; color:var(--muted);}
 .block[data-type="oli"]::before{content:attr(data-number) "."; position:absolute; left:0; color:var(--muted);}
 .block[data-type="blockquote"]{padding:.2em .9em; border-left:3px solid var(--accent); background:var(--quote-bg); color:var(--muted); border-radius:0 4px 4px 0;}
-.block[data-type="pre"]{background:var(--code-bg); padding:2px 14px; font-family:var(--font-mono); font-size:.88em; white-space:pre-wrap; margin:0; border-radius:0;}
+.block[data-type="pre"]{background:var(--code-bg); padding:2px 14px 2px 0; font-family:var(--font-mono); font-size:.88em; white-space:pre; overflow-x:auto; margin:0 0 0 calc(-1 * (var(--gutter) - 8px)); border-radius:0;}
 /* 連続するコード行（1行=1ブロック）を、見た目上ひとつながりのコードブロックにまとめる */
 .block[data-type="pre"]:not(.block[data-type="pre"] + .block[data-type="pre"]){border-top-left-radius:6px; border-top-right-radius:6px; margin-top:.3em;}
 .block[data-type="pre"]:not(:has(+ .block[data-type="pre"])){border-bottom-left-radius:6px; border-bottom-right-radius:6px; margin-bottom:.3em;}
+/* 各行は（どこにホバーしても横スクロールできるよう）overflow-x:auto のままにしつつ、
+   スクロールバーの見た目はグループの最後の行だけに出し、ひとつながりのコードブロックの
+   一番下にだけスクロールバーがあるように見せる（各行がスクロール位置・幅を同期しているため、
+   最後の行のスクロールバーがブロック全体の位置を正しく表す） */
+.block[data-type="pre"]{scrollbar-width:none;}
+.block[data-type="pre"]::-webkit-scrollbar{display:none; height:0;}
+.block[data-type="pre"]:not(:has(+ .block[data-type="pre"])){scrollbar-width:thin;}
+.block[data-type="pre"]:not(:has(+ .block[data-type="pre"]))::-webkit-scrollbar{display:block; height:8px;}
+.block[data-type="pre"]:not(:has(+ .block[data-type="pre"]))::-webkit-scrollbar-track{background:transparent;}
+.block[data-type="pre"]:not(:has(+ .block[data-type="pre"]))::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
+.block[data-type="pre"]:not(:has(+ .block[data-type="pre"]))::-webkit-scrollbar-thumb:hover{background:var(--muted);}
 .block[data-type="hr"]{padding:2px 0; margin:.55em 0;}
 .block[data-type="hr"] hr{border:none; border-top:1px solid var(--border); margin:0; position:absolute; left:0; right:0; top:50%; transform:translateY(-50%);}
 
@@ -314,8 +354,23 @@ body{
 #editor code{background:var(--code-bg); padding:.1em .35em; border-radius:4px; font-family:var(--font-mono); font-size:.9em;}
 #editor a{color:var(--accent); text-decoration:underline; text-decoration-color:rgba(var(--glow),.45); text-underline-offset:2px; cursor:pointer;}
 #editor a:hover{text-decoration-color:var(--accent);}
-.empty-state{display:none; text-align:center; color:var(--muted); padding:100px 20px; border:2px dashed var(--border); border-radius:12px; font-size:14px; line-height:1.9;}
+.empty-state{display:none; text-align:center; color:var(--muted); padding:60px 20px; border:2px dashed var(--border); border-radius:12px; font-size:14px; line-height:1.9;}
 .wrap.locked .empty-state{display:block;}
+.recent-folders{margin:28px auto 0; max-width:360px; text-align:left;}
+.recent-folders .rf-title{font-size:12px; color:var(--muted); opacity:.7; margin:0 0 8px 2px;}
+.recent-folder{
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:9px 10px; margin:0 0 6px; border-radius:8px; border:1px solid var(--border);
+  background:var(--btn-bg); color:var(--btn-text); cursor:pointer; font:inherit; font-size:13px;
+  text-align:left;
+}
+.recent-folder:hover{border-color:var(--accent); color:var(--accent);}
+.recent-folder .rf-icon{font-size:15px; flex:none;}
+.recent-folder .rf-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.recent-folder .rf-remove{
+  flex:none; opacity:.4; padding:2px 6px; border-radius:5px; font-size:12px; color:var(--muted);
+}
+.recent-folder .rf-remove:hover{opacity:1; color:var(--text); background:rgba(255,255,255,.08);}
 .wrap.locked #editor{display:none;}
 
 /* ---- スクロールバー ---- */
@@ -369,7 +424,10 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible{
       <span class="fname" id="fname"></span>
       <span class="save-status" id="saveStatus"></span>
     </div>
-    <div class="empty-state" id="emptyState">📄 フォルダを開いてファイルを選ぶと編集できます<br><span style="opacity:.7">「📁 フォルダを開く」から、またはここにファイルをドラッグ&ドロップ</span></div>
+    <div class="empty-state" id="emptyState">
+      <div>📄 フォルダを開いてファイルを選ぶと編集できます<br><span style="opacity:.7">「📁 フォルダを開く」から、またはここにファイルをドラッグ&ドロップ</span></div>
+      <div class="recent-folders" id="recentFolders"></div>
+    </div>
     <div id="editor" contenteditable="true" spellcheck="false"></div>
   </div>
   <div class="outline-panel" id="outlinePanel">
@@ -974,7 +1032,7 @@ function save(){
   try{ localStorage.setItem(STORE_KEY, editor.innerHTML); }catch(e){}
 }
 let saveTimer;
-function scheduleSave(){ markDirty(); clearTimeout(saveTimer); saveTimer=setTimeout(save,400); }
+function scheduleSave(){ markDirty(); clearTimeout(saveTimer); saveTimer=setTimeout(save,400); scheduleOutlineUpdate(); syncAllPreGroupWidths(); }
 
 function closestBlock(node){
   while(node && node !== editor){
@@ -1168,6 +1226,7 @@ let history = [];
 let historyIndex = -1;
 let isApplyingHistory = false;
 let historyTimer = null;
+let historyPending = false;
 const HISTORY_COALESCE_MS = 500;
 const HISTORY_MAX = 200;
 
@@ -1187,10 +1246,13 @@ function updateUndoRedoButtons(){
 function resetHistory(){
   history = [snapshotNow()];
   historyIndex = 0;
+  historyPending = false;
+  clearTimeout(historyTimer);
   updateUndoRedoButtons();
 }
 function pushHistory(){
   if(isApplyingHistory) return;
+  historyPending = false;
   history = history.slice(0, historyIndex+1);
   history.push(snapshotNow());
   if(history.length > HISTORY_MAX) history.shift();
@@ -1199,8 +1261,12 @@ function pushHistory(){
 }
 function scheduleHistoryPush(){
   if(isApplyingHistory) return;
+  historyPending = true;
   clearTimeout(historyTimer);
   historyTimer = setTimeout(pushHistory, HISTORY_COALESCE_MS);
+}
+function flushPendingHistory(){
+  if(historyPending){ clearTimeout(historyTimer); pushHistory(); }
 }
 function applyHistoryState(snap){
   isApplyingHistory = true;
@@ -1217,20 +1283,92 @@ function applyHistoryState(snap){
   updateUndoRedoButtons();
 }
 function undo(){
+  flushPendingHistory();
   if(historyIndex<=0) return;
-  clearTimeout(historyTimer);
-  pushHistory();   // 直前の未確定の変更を履歴に確定させてから戻る
   historyIndex--;
   applyHistoryState(history[historyIndex]);
 }
 function redo(){
   if(historyIndex>=history.length-1) return;
-  clearTimeout(historyTimer);
   historyIndex++;
   applyHistoryState(history[historyIndex]);
 }
 new MutationObserver(()=>{ if(!isApplyingHistory) scheduleHistoryPush(); })
   .observe(editor, {childList:true, subtree:true, characterData:true, attributes:true});
+
+/* 連続するコード行（1行=1ブロック）は見た目上ひとつながりのコードブロックなので、
+   どこか1行を横スクロールしたら、同じグループの他の行にも同じスクロール位置を反映して
+   コードブロック全体が一体として横スクロールしているように見せる。
+   ただし内容が短い行はそもそも横にスクロールできる余地がないため、それだけでは
+   「短い行だけ動かない」状態になる。そこで、行末に見えない幅調整用スペーサーを
+   足して、グループ内の全行が同じスクロール可能量を持つよう揃えておく。
+   'scroll' イベントはバブリングしないため、#editor でキャプチャ段階で拾う。 */
+function preGroupLines(block){
+  let start = block, end = block;
+  while(start.previousElementSibling && start.previousElementSibling.dataset.type==='pre') start = start.previousElementSibling;
+  while(end.nextElementSibling && end.nextElementSibling.dataset.type==='pre') end = end.nextElementSibling;
+  const lines = [];
+  let n = start;
+  while(n){ lines.push(n); if(n===end) break; n = n.nextElementSibling; }
+  return lines;
+}
+function syncPreGroupWidths(lines){
+  for(const ln of lines){
+    const sp = ln.querySelector(':scope > .pre-spacer');
+    if(sp) sp.remove();
+  }
+  let maxW = 0;
+  for(const ln of lines) maxW = Math.max(maxW, ln.scrollWidth);
+  for(const ln of lines){
+    if(ln.scrollWidth < maxW){
+      const sp = document.createElement('span');
+      sp.className = 'pre-spacer';
+      sp.style.cssText = 'display:inline-block; width:' + (maxW - ln.scrollWidth) + 'px;';
+      ln.appendChild(sp);
+    }
+  }
+}
+function syncAllPreGroupWidths(){
+  const seen = new Set();
+  for(const b of editor.children){
+    if(b.dataset.type==='pre' && !seen.has(b)){
+      const lines = preGroupLines(b);
+      lines.forEach(l=>seen.add(l));
+      syncPreGroupWidths(lines);
+    }
+  }
+}
+function syncPreGroupScroll(block){
+  const sl = block.scrollLeft;
+  for(const ln of preGroupLines(block)){
+    if(ln!==block && ln.scrollLeft!==sl) ln.scrollLeft = sl;
+  }
+}
+editor.addEventListener('scroll', (e)=>{
+  const t = e.target;
+  if(t && t.classList && t.classList.contains('block') && t.dataset.type==='pre'){
+    syncPreGroupScroll(t);
+  }
+}, true);
+/* トラックパッド／ホイールでの横スクロールは、どの行の上にカーソルがあっても
+   ブラウザ標準のスクロールに任せず、ここで一括してグループ全行の scrollLeft を
+   同じ値に揃える。各行が個別にブラウザ標準スクロールしてしまうと、行ごとに
+   タイミングがずれて「行単体でバラバラにスクロールしている」ように見えてしまうため、
+   ネイティブのスクロール自体を止めて、コードブロック全体を単一のスクロール単位として
+   同期的に動かす。 */
+editor.addEventListener('wheel', (e)=>{
+  const block = e.target.closest && e.target.closest('.block[data-type="pre"]');
+  if(!block) return;
+  const horizontalIntent = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
+  if(!horizontalIntent) return;
+  const delta = (e.shiftKey && Math.abs(e.deltaX) <= Math.abs(e.deltaY)) ? e.deltaY : e.deltaX;
+  const lines = preGroupLines(block);
+  const maxLeft = Math.max(0, ...lines.map(l=>l.scrollWidth - l.clientWidth));
+  const newLeft = Math.min(Math.max(block.scrollLeft + delta, 0), maxLeft);
+  if(maxLeft<=0) return;
+  e.preventDefault();
+  for(const ln of lines){ if(ln.scrollLeft!==newLeft) ln.scrollLeft = newLeft; }
+}, {passive:false});
 btnUndo.addEventListener('click', undo);
 btnRedo.addEventListener('click', redo);
 
@@ -1318,6 +1456,16 @@ editor.addEventListener('keydown', (e)=>{
     const jumpToEdge = e.metaKey || e.ctrlKey;
     const instant = e.repeat || jumpToEdge;
     keepScrollInSyncWhileHeld(instant);
+    if(block.dataset.type==='pre' && e.key==='ArrowDown' && !block.nextElementSibling){
+      // コードブロックが文書の一番下にある場合、下矢印キーで外に出られるよう空行を作る
+      e.preventDefault();
+      const p = newBlock('p');
+      block.after(p);
+      placeCaretEnd(p);
+      renumberLists(); scheduleSave();
+      smoothScrollToCaret(instant);
+      return;
+    }
     if(block.dataset.type==='tr'){
       e.preventDefault();
       const cell = currentCell();
@@ -1926,6 +2074,107 @@ const sidebarBackdrop = document.getElementById('sidebarBackdrop');
 const sidebarNoticeEl = document.getElementById('sidebarNotice');
 
 let rootDirHandle = null;            // 開いているフォルダ
+
+/* ================= 最近開いたフォルダ ================= */
+/* FileSystemDirectoryHandle は structured-clone できるので、
+   IndexedDB に保存しておけば次回はピッカーを開かずワンクリックで再オープンできる。
+   （localStorage は文字列しか保持できないためハンドルを保存できない） */
+const RECENT_DB = 'md-live-recent-folders', RECENT_STORE = 'folders', RECENT_MAX = 8;
+function openRecentDB(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(RECENT_DB, 1);
+    req.onupgradeneeded = ()=>{ req.result.createObjectStore(RECENT_STORE, {keyPath:'id'}); };
+    req.onsuccess = ()=>resolve(req.result);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+async function idbTx(mode, fn){
+  try{
+    const db = await openRecentDB();
+    return await new Promise((resolve, reject)=>{
+      const tx = db.transaction(RECENT_STORE, mode);
+      const store = tx.objectStore(RECENT_STORE);
+      let result;
+      Promise.resolve(fn(store)).then(r=>{ result = r; }).catch(reject);
+      tx.oncomplete = ()=>resolve(result);
+      tx.onerror = ()=>reject(tx.error);
+    });
+  }catch(err){ return undefined; }
+}
+function idbGetAll(store){
+  return new Promise((resolve, reject)=>{
+    const req = store.getAll();
+    req.onsuccess = ()=>resolve(req.result||[]);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+async function listRecentFolders(){
+  const rows = await idbTx('readonly', idbGetAll) || [];
+  return rows.sort((a,b)=>b.lastOpened-a.lastOpened);
+}
+async function rememberRecentFolder(handle){
+  await idbTx('readwrite', async (store)=>{
+    const rows = await idbGetAll(store);
+    // 同じフォルダが既に登録されていれば重複させず、開いた時刻だけ更新する
+    for(const row of rows){
+      let same = false;
+      try{ same = await handle.isSameEntry(row.handle); }catch(e){}
+      if(same){ store.delete(row.id); }
+    }
+    store.put({id:(crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random())), name:handle.name, handle, lastOpened:Date.now()});
+    const fresh = (await idbGetAll(store)).sort((a,b)=>b.lastOpened-a.lastOpened);
+    for(const row of fresh.slice(RECENT_MAX)) store.delete(row.id);
+  });
+}
+async function forgetRecentFolder(id){
+  await idbTx('readwrite', (store)=>store.delete(id));
+}
+
+async function renderRecentFolders(){
+  const box = document.getElementById('recentFolders');
+  if(!box) return;
+  if(!window.indexedDB || !window.showDirectoryPicker){ box.innerHTML=''; return; }
+  if(appEl.classList.contains('folder-open')){ box.innerHTML=''; return; }
+  const rows = await listRecentFolders();
+  if(!rows.length){ box.innerHTML=''; return; }
+  box.innerHTML = '';
+  const title = document.createElement('div');
+  title.className = 'rf-title';
+  title.textContent = '最近使ったフォルダ';
+  box.appendChild(title);
+  for(const row of rows){
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'recent-folder';
+    btn.innerHTML = '<span class="rf-icon">📁</span><span class="rf-name"></span><span class="rf-remove">✕</span>';
+    btn.querySelector('.rf-name').textContent = row.name;
+    btn.querySelector('.rf-remove').addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      await forgetRecentFolder(row.id);
+      renderRecentFolders();
+    });
+    btn.addEventListener('click', ()=>openRecentFolder(row));
+    box.appendChild(btn);
+  }
+}
+
+async function openRecentFolder(row){
+  // ハンドル自体は残っていても、フォルダが移動・削除されていたり
+  // 権限が失効している場合があるので、その都度確認する。
+  let ok = false;
+  try{ ok = await ensureWritePermission(row.handle); }catch(e){}
+  if(!ok){
+    showNotice('「' + row.name + '」を開けませんでした（権限が必要か、フォルダが見つかりません）');
+    await forgetRecentFolder(row.id);
+    renderRecentFolders();
+    return;
+  }
+  rootDirHandle = row.handle;
+  expandedDirs.clear();
+  activeFilePath = null;
+  await refreshTree();
+  appEl.classList.add('folder-open');
+  rememberRecentFolder(row.handle);
+}
 const expandedDirs = new Set();      // 展開中のフォルダ（'sub/dir/' 形式のパス）
 let treeRenderToken = 0;
 let inlineEditCancel = null;         // 名前入力中（改名・新規作成）の取り消し関数
@@ -2635,6 +2884,7 @@ document.getElementById('btnOpenFolder').addEventListener('click', async ()=>{
     activeFilePath = null;
     await refreshTree();
     appEl.classList.add('folder-open');
+    rememberRecentFolder(dirHandle);
   }catch(err){
     // ユーザーによるキャンセル等は無視
   }
@@ -2763,10 +3013,23 @@ document.addEventListener('keydown', (e)=>{
   if((e.metaKey || e.ctrlKey) && !e.altKey && (e.key==='z' || e.key==='Z')){
     e.preventDefault();
     if(e.shiftKey) redo(); else undo();
+    return;
+  }
+  if((e.metaKey || e.ctrlKey) && (e.key==='l' || e.key==='L')){
+    if(!fileOpen) return;
+    const block = closestBlock(window.getSelection().anchorNode);
+    if(!block || !editor.contains(block)) return;
+    e.preventDefault();
+    const range = document.createRange();
+    range.selectNodeContents(block);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
   }
 });
 
 init();
+renderRecentFolders();
 </script>
 </body>
 </html>
