@@ -80,23 +80,27 @@ body{
 .block[data-type="h1"]::after{top:16px}
 .block[data-type="h2"]::after{top:11px}
 .block[data-type="h3"]::after{top:7px}
-/* コードブロックは、連続する行（.block[data-type="pre"]）をまとめて外側の .pre-group
-   要素でラップし、その外側の要素だけを overflow-x:auto にすることで、コードブロック
-   全体がひとつのスクロール単位としてスクロールするようにする（行ごとに個別スクロール
-   させない）。ラップ処理は normalizePreGroups() が編集のたびに行う。
-   番号はガター番号と同じ位置に揃うよう、ラッパー自体を左マージンでガター側まで広げ、
-   sticky 配置で横スクロールしても左端に固定表示させる。 */
-.pre-group{
-  display:block; overflow-x:auto; border-radius:6px;
+.block[data-type="h1"]{font-size:1.9em; font-weight:700; margin:.5em 0 .1em;}
+.block[data-type="h2"]{font-size:1.5em; font-weight:700; margin:.4em 0 .1em;}
+.block[data-type="h3"]{font-size:1.2em; font-weight:700; margin:.3em 0 .1em;}
+.block[data-type="li"], .block[data-type="oli"]{padding-left:1.6em;}
+.block[data-type="li"]::before{content:"•"; position:absolute; left:.3em; color:var(--muted);}
+.block[data-type="oli"]::before{content:attr(data-number) "."; position:absolute; left:0; color:var(--muted);}
+.block[data-type="blockquote"]{padding:.2em .9em; border-left:3px solid var(--accent); background:var(--quote-bg); color:var(--muted); border-radius:0 4px 4px 0;}
+
+/* ---- コードブロック：連続する行（1行=1ブロック）をひとつながりの箱に見せる ----
+   実装メモ：行ごとに独立した .block[data-type="pre"] 要素があるだけで、それらをまとめる
+   ラッパー要素は存在しない。「ひとつの箱」に見えるのは、CSSの隣接・:has() セレクタで
+   最初の行だけ上辺の枠と角丸を、最後の行だけ下辺の枠・角丸・スクロールバーを付けている
+   ため。横スクロール幅は各行が個別に持っているので、syncPreGroupWidths()（JS）が
+   編集のたびに全行の幅をそろえている。 */
+.block[data-type="pre"]{
+  position:relative;
   background:var(--code-bg);
-  margin:.3em 0 .3em calc(-1 * (var(--gutter) - 8px));
-  scrollbar-width:thin;
+  border-left:1px solid var(--border); border-right:1px solid var(--border);
+  padding:2px 14px 2px 10px; font-family:var(--font-mono); font-size:.88em; white-space:pre;
+  overflow-x:auto; margin:0 0 0 calc(-1 * (var(--gutter) - 8px)); border-radius:0;
 }
-.pre-group::-webkit-scrollbar{height:8px;}
-.pre-group::-webkit-scrollbar-track{background:transparent;}
-.pre-group::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
-.pre-group::-webkit-scrollbar-thumb:hover{background:var(--muted);}
-.block[data-type="pre"]{background:transparent; padding:2px 14px 2px 0; font-family:var(--font-mono); font-size:.88em; white-space:pre; overflow:visible; margin:0; border-radius:0;}
 .block[data-type="pre"]::after{content:none;}
 .block[data-type="pre"]::before{
   content:counter(lineno);
@@ -110,22 +114,23 @@ body{
   vertical-align:top; z-index:2;
 }
 .block[data-type="pre"].is-current::before{color:var(--accent); opacity:1; text-shadow:0 0 10px rgba(var(--glow),.7);}
-
-.block[data-type="h1"]{font-size:1.9em; font-weight:700; margin:.5em 0 .1em;}
-.block[data-type="h2"]{font-size:1.5em; font-weight:700; margin:.4em 0 .1em;}
-.block[data-type="h3"]{font-size:1.2em; font-weight:700; margin:.3em 0 .1em;}
-.block[data-type="li"], .block[data-type="oli"]{padding-left:1.6em;}
-.block[data-type="li"]::before{content:"•"; position:absolute; left:.3em; color:var(--muted);}
-.block[data-type="oli"]::before{content:attr(data-number) "."; position:absolute; left:0; color:var(--muted);}
-.block[data-type="blockquote"]{padding:.2em .9em; border-left:3px solid var(--accent); background:var(--quote-bg); color:var(--muted); border-radius:0 4px 4px 0;}
-.block[data-type="pre"]{background:var(--code-bg); padding:2px 14px 2px 0; font-family:var(--font-mono); font-size:.88em; white-space:pre; overflow-x:auto; margin:0 0 0 calc(-1 * (var(--gutter) - 8px)); border-radius:0;}
-/* 連続するコード行（1行=1ブロック）を、見た目上ひとつながりのコードブロックにまとめる */
-.block[data-type="pre"]:not(.block[data-type="pre"] + .block[data-type="pre"]){border-top-left-radius:6px; border-top-right-radius:6px; margin-top:.3em;}
-.block[data-type="pre"]:not(:has(+ .block[data-type="pre"])){border-bottom-left-radius:6px; border-bottom-right-radius:6px; margin-bottom:.3em;}
-/* 各行は（どこにホバーしても横スクロールできるよう）overflow-x:auto のままにしつつ、
-   スクロールバーの見た目はグループの最後の行だけに出し、ひとつながりのコードブロックの
-   一番下にだけスクロールバーがあるように見せる（各行がスクロール位置・幅を同期しているため、
-   最後の行のスクロールバーがブロック全体の位置を正しく表す） */
+/* 最初の行：上辺の枠・角丸・見出し的な「code」ラベル・余白を付けて、本文との境目を明確にする */
+.block[data-type="pre"]:not(.block[data-type="pre"] + .block[data-type="pre"]){
+  border-top:1px solid var(--border); border-top-left-radius:8px; border-top-right-radius:8px;
+  margin-top:.7em; padding-top:22px;
+}
+.block[data-type="pre"]:not(.block[data-type="pre"] + .block[data-type="pre"])::after{
+  content:'code'; display:block; position:absolute; top:5px; left:10px; right:10px;
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--muted); opacity:.55; pointer-events:none; user-select:none;
+}
+/* 最後の行：下辺の枠・角丸・余白。スクロールバーも最後の行にだけ見せる
+   （各行の横スクロール位置・幅はJSで同期しているので、最後の行のスクロールバーが
+   ブロック全体の位置を正しく表す） */
+.block[data-type="pre"]:not(:has(+ .block[data-type="pre"])){
+  border-bottom:1px solid var(--border); border-bottom-left-radius:8px; border-bottom-right-radius:8px;
+  margin-bottom:.7em; padding-bottom:8px;
+}
 .block[data-type="pre"]{scrollbar-width:none;}
 .block[data-type="pre"]::-webkit-scrollbar{display:none; height:0;}
 .block[data-type="pre"]:not(:has(+ .block[data-type="pre"])){scrollbar-width:thin;}
@@ -206,6 +211,22 @@ body{
 }
 .table-toolbar button:hover:not(:disabled){border-color:var(--accent); color:var(--accent);}
 .table-toolbar button:disabled{opacity:.3; cursor:not-allowed;}
+
+/* ---- 複数行選択時：行タイプを一括変更するミニツールバー ---- */
+.block-type-toolbar{
+  position:fixed; z-index:56; display:none;
+  gap:3px; padding:4px; border-radius:8px;
+  background:var(--panel); border:1px solid var(--border);
+  box-shadow:0 10px 28px rgba(0,0,0,.5);
+}
+.block-type-toolbar.open{display:flex;}
+.block-type-toolbar button{
+  font:inherit; font-size:12px; padding:5px 9px; border-radius:6px; border:1px solid var(--border);
+  background:var(--btn-bg); color:var(--btn-text); cursor:pointer; white-space:nowrap;
+}
+.block-type-toolbar button:hover{border-color:var(--accent); color:var(--accent);}
+.block-type-toolbar button.active{border-color:var(--accent); color:var(--accent); background:rgba(var(--glow),.15);}
+.block-type-toolbar .bt-sep{width:1px; margin:2px 1px; background:var(--border);}
 
 /* ---- リンク編集ツールバー（リンク内にキャレットがあるときに表示） ---- */
 .link-toolbar{
@@ -449,6 +470,7 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible{
   </div>
 </div>
 <div class="table-toolbar" id="tableToolbar"></div>
+<div class="block-type-toolbar" id="blockTypeToolbar"></div>
 <div class="link-toolbar" id="linkToolbar"></div>
 <div class="link-hint" id="linkHint"><button type="button" id="linkHintBtn">✎ 編集</button></div>
 <input type="file" id="fileInput" accept=".md,.markdown,.txt,text/markdown" style="display:none">
@@ -707,6 +729,94 @@ function updateTableToolbar(){
 document.addEventListener('selectionchange', updateTableToolbar);
 editor.addEventListener('blur', hideTableToolbar);
 document.addEventListener('scroll', ()=>{ if(tableToolbarBlock) renderTableToolbar(tableToolbarBlock); }, true);
+
+/* ---- 複数行選択時：選択範囲にかかる行をまとめて別のタイプに変更する ----
+   表（tr）・コードブロック（pre）・区切り線（hr）は構造が特殊なので対象から除外し、
+   選択範囲にそれらが混ざっていてもそこだけ変更せずスキップする。 */
+const BLOCK_TYPE_OPTIONS = [
+  {type:'p', label:'本文', title:'本文に変更'},
+  {type:'h1', label:'H1', title:'見出し1に変更'},
+  {type:'h2', label:'H2', title:'見出し2に変更'},
+  {type:'h3', label:'H3', title:'見出し3に変更'},
+  {type:'li', label:'•', title:'箇条書きに変更'},
+  {type:'oli', label:'1.', title:'番号付きリストに変更'},
+  {type:'task', label:'☑', title:'To-Doに変更'},
+  {type:'blockquote', label:'”', title:'引用に変更'}
+];
+function convertibleBlocksInSelection(){
+  const sel = window.getSelection();
+  if(!sel || !sel.rangeCount || sel.isCollapsed) return null;
+  const range = sel.getRangeAt(0);
+  const startBlock = closestBlock(range.startContainer);
+  const endBlock = closestBlock(range.endContainer);
+  if(!startBlock || !endBlock || !editor.contains(startBlock) || !editor.contains(endBlock)) return null;
+  if(startBlock === endBlock) return null;   // 1行内の選択では出さない（通常のテキスト選択と区別する）
+  const all = Array.from(editor.children);
+  const si = all.indexOf(startBlock), ei = all.indexOf(endBlock);
+  if(si===-1 || ei===-1) return null;
+  const lo = Math.min(si,ei), hi = Math.max(si,ei);
+  return all.slice(lo, hi+1);
+}
+function applyBlockType(type){
+  if(!blockTypeToolbarBlocks) return;
+  for(const b of blockTypeToolbarBlocks){
+    if(b.dataset.type==='tr' || b.dataset.type==='pre' || b.dataset.type==='hr') continue;
+    b.dataset.type = type;
+    if(type==='task'){ if(b.dataset.checked==null) b.dataset.checked='0'; }
+    else delete b.dataset.checked;
+  }
+  renumberLists();
+  scheduleSave();
+  renderBlockTypeToolbar();   // 選択は保持されたままなので、見た目（有効ボタン）だけ更新する
+}
+const blockTypeToolbarEl = document.getElementById('blockTypeToolbar');
+let blockTypeToolbarBlocks = null;
+function hideBlockTypeToolbar(){
+  blockTypeToolbarBlocks = null;
+  blockTypeToolbarEl.classList.remove('open');
+}
+function positionBlockTypeToolbar(){
+  const sel = window.getSelection();
+  if(!sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  const rects = range.getClientRects();
+  const r = rects.length ? rects[0] : range.getBoundingClientRect();
+  const w = blockTypeToolbarEl.offsetWidth, h = blockTypeToolbarEl.offsetHeight;
+  let top = r.top - h - 8;
+  if(top < 8) top = r.bottom + 8;
+  let left = r.left;
+  if(left + w > window.innerWidth - 8) left = window.innerWidth - w - 8;
+  if(left < 8) left = 8;
+  blockTypeToolbarEl.style.top = top + 'px';
+  blockTypeToolbarEl.style.left = left + 'px';
+}
+function renderBlockTypeToolbar(){
+  const blocks = blockTypeToolbarBlocks.filter(b => b.dataset.type!=='tr' && b.dataset.type!=='pre' && b.dataset.type!=='hr');
+  const uniform = blocks.length ? blocks.every(b=>b.dataset.type===blocks[0].dataset.type) : false;
+  const uniformType = uniform ? blocks[0].dataset.type : null;
+  blockTypeToolbarEl.innerHTML = '';
+  for(const opt of BLOCK_TYPE_OPTIONS){
+    const btn = document.createElement('button');
+    btn.textContent = opt.label; btn.title = opt.title;
+    btn.classList.toggle('active', opt.type===uniformType);
+    btn.addEventListener('mousedown', (e)=>{ e.preventDefault(); applyBlockType(opt.type); });
+    blockTypeToolbarEl.appendChild(btn);
+  }
+  blockTypeToolbarEl.classList.add('open');
+  positionBlockTypeToolbar();
+}
+function updateBlockTypeToolbar(){
+  const blocks = convertibleBlocksInSelection();
+  // tr / pre / hr だけの選択（例：コードブロック内だけの複数行選択）では
+  // 何も変更できないので、ボタンを押しても無反応なツールバーを出さない。
+  const hasConvertible = blocks && blocks.some(b => b.dataset.type!=='tr' && b.dataset.type!=='pre' && b.dataset.type!=='hr');
+  if(!hasConvertible){ hideBlockTypeToolbar(); return; }
+  blockTypeToolbarBlocks = blocks;
+  renderBlockTypeToolbar();
+}
+document.addEventListener('selectionchange', updateBlockTypeToolbar);
+editor.addEventListener('blur', hideBlockTypeToolbar);
+document.addEventListener('scroll', ()=>{ if(blockTypeToolbarBlocks) positionBlockTypeToolbar(); }, true);
 
 /* ---- リンク編集ツールバー：リンクの中にキャレットがあるとき、まず小さな「編集」ヒント
    ボタンだけを出す。ヒントを押すと、リンク先とリンクテキストを別々の入力欄で編集できる
@@ -1897,6 +2007,88 @@ editor.addEventListener('paste', (e)=>{
     placeCaretEnd(lastNew);
   }
   renumberLists(); applyTableAlign(); scheduleSave();
+});
+
+/* ================= コピー =================
+   複数行にまたがる選択をコピーすると、見出しの「# 」やリストの「- 」といった
+   Markdown記法も含めてコピーされるようにする（既定の挙動では画面に見えている
+   文字だけがコピーされ、マーカーはCSSの装飾なので失われてしまうため）。
+   1行内だけの選択ではブラウザ標準のコピーに任せる（一致する挙動を変える必要がないため）。 */
+function blockMarkdownPrefix(b){
+  const indent = '  '.repeat(parseInt(b.dataset.level||'0',10));
+  switch(b.dataset.type){
+    case 'h1': return '# ';
+    case 'h2': return '## ';
+    case 'h3': return '### ';
+    case 'li': return indent+'- ';
+    case 'task': return indent+'- ['+(b.dataset.checked==='1'?'x':' ')+'] ';
+    case 'oli': return indent+(b.dataset.number||'1')+'. ';
+    case 'blockquote': return indent+'> ';
+    default: return '';
+  }
+}
+function markdownForSelection(range){
+  const startBlock = closestBlock(range.startContainer);
+  const endBlock = closestBlock(range.endContainer);
+  if(!startBlock || !endBlock || !editor.contains(startBlock) || !editor.contains(endBlock)) return null;
+  const all = Array.from(editor.children);
+  const si = all.indexOf(startBlock), ei = all.indexOf(endBlock);
+  if(si===-1 || ei===-1 || si===ei) return null;   // 同じ行内の選択は対象外
+  const lo = Math.min(si,ei), hi = Math.max(si,ei);
+  const blocks = all.slice(lo, hi+1);
+  const firstBlock = blocks[0], lastBlock = blocks[blocks.length-1];
+
+  function offsetWithin(block, node, off){
+    const r = document.createRange();
+    r.selectNodeContents(block);
+    try{ r.setEnd(node, off); }catch(e){ return (block.textContent||'').length; }
+    return r.toString().length;
+  }
+  // Range の start/end は常にドキュメント順（前→後）に正規化されているので、
+  // si<=ei か ei<=si かに関わらず startContainer が前方、endContainer が後方になる。
+  const startOffset = offsetWithin(firstBlock, range.startContainer, range.startOffset);
+  const endOffset = offsetWithin(lastBlock, range.endContainer, range.endOffset);
+
+  const lines = [];
+  let i = 0;
+  while(i < blocks.length){
+    const b = blocks[i];
+    if(b.dataset.type==='pre'){
+      // 連続するコード行をまとめてフェンス（```）で囲む。選択範囲が
+      // コードブロックの途中から始まる／途中で終わる場合はそこだけ文字単位で切り詰める。
+      const group = [];
+      while(i < blocks.length && blocks[i].dataset.type==='pre'){ group.push(blocks[i]); i++; }
+      lines.push('```');
+      for(const gb of group){
+        let text = gb.textContent || '';
+        if(gb===lastBlock) text = text.slice(0, endOffset);
+        if(gb===firstBlock) text = text.slice(startOffset);
+        lines.push(text);
+      }
+      lines.push('```');
+      continue;
+    }
+    if(b===firstBlock && startOffset>0){
+      // 行の途中から選択されている最初の行：書式マーカーは付けず、生のテキストだけ使う
+      const end = (b===lastBlock) ? endOffset : undefined;
+      lines.push((b.textContent||'').slice(startOffset, end));
+    } else if(b===lastBlock && endOffset < (b.textContent||'').length){
+      // 行の途中までしか選択されていない最後の行：マーカーは付けつつテキストだけ切り詰める
+      lines.push(blockMarkdownPrefix(b) + (b.textContent||'').slice(0, endOffset));
+    } else {
+      lines.push(blockToMarkdown(b));
+    }
+    i++;
+  }
+  return lines.join('\n');
+}
+editor.addEventListener('copy', (e)=>{
+  const sel = window.getSelection();
+  if(!sel || !sel.rangeCount || sel.isCollapsed) return;
+  const md = markdownForSelection(sel.getRangeAt(0));
+  if(md==null) return;
+  e.preventDefault();
+  e.clipboardData.setData('text/plain', md);
 });
 
 /* ================= スラッシュコマンド（スニペット） ================= */
